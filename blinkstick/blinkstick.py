@@ -188,6 +188,8 @@ class BlinkStick(object):
     inverse = False
     error_reporting = True
     max_rgb_value = 255
+    
+    
 
     def __init__(self, device=None, error_reporting=True):
         """
@@ -197,6 +199,7 @@ class BlinkStick(object):
         @param error_reporting: display errors if they occur during communication with the device
         """
         self.error_reporting = error_reporting
+        self.current_colors={}
 
         if device:
             self.device = device
@@ -304,8 +307,19 @@ class BlinkStick(object):
         @param error_reporting: display errors if they occur during communication with the device
         """
         self.error_reporting = error_reporting
+        
+    def set_color_all(self, channel=0, list=[], red=0, green=0, blue=0, name=None, hex=None):
+        if list==[]:
+            list=[0]
+        for l in list:
+            
+            self.set_color(channel, l, red, green, blue, name, hex)
+            
+        
+        
 
     def set_color(self, channel=0, index=0, red=0, green=0, blue=0, name=None, hex=None):
+        
         """
         Set the color to the device as RGB
 
@@ -336,6 +350,24 @@ class BlinkStick(object):
         else:
             control_string = bytes(bytearray([5, channel, index, r, g, b]))
             report_id = 0x0005
+            
+        
+        for c in range(0,channel+1):
+            try:
+                self.current_colors[c]
+            except:
+                self.current_colors[c]={}
+        for i in range(0,index+1):
+            try:
+                self.current_colors[c][i]
+            except:
+                self.current_colors[c][i]={}
+                    
+        
+        self.current_colors[channel][index]=[r,g,b]
+        
+        
+        
 
         if self.error_reporting:
             self._usb_ctrl_transfer(0x20, 0x9, report_id, 0, control_string)
@@ -659,6 +691,42 @@ class BlinkStick(object):
         for x in range(repeats):
             self.morph(channel=channel, index=index, red=r, green=g, blue=b, duration=duration, steps=steps)
             self.morph(channel=channel, index=index, red=0, green=0, blue=0, duration=duration, steps=steps)
+            
+    def blink_all(self,channel=0, list=[],red=0, green=0, blue=0, name=None, hex=None, repeats=1, delay=500):
+        """
+        Blink the specified color.
+
+        @type  red: int
+        @param red: Red color intensity 0 is off, 255 is full red intensity
+        @type  green: int
+        @param green: Green color intensity 0 is off, 255 is full green intensity
+        @type  blue: int
+        @param blue: Blue color intensity 0 is off, 255 is full blue intensity
+        @type  name: str
+        @param name: Use CSS color name as defined here: U{http://www.w3.org/TR/css3-color/}
+        @type  hex: str
+        @param hex: Specify color using hexadecimal color value e.g. '#FF3366'
+        @type  repeats: int
+        @param repeats: Number of times to pulse the LED
+        @type  delay: int
+        @param delay: time in milliseconds to light LED for, and also between blinks
+        """
+        r, g, b = self._determine_rgb(red=red, green=green, blue=blue, name=name, hex=hex)
+        ms_delay = float(delay) / float(1000)
+        if list==[]:
+            list=[0]
+        
+        for x in range(repeats):
+            if x:
+                time.sleep(ms_delay)
+            for l in list:
+                self.set_color(channel=channel, index=l, red=r, green=g, blue=b)
+            time.sleep(ms_delay)
+            for l in list:
+                self.set_color(channel=channel, index=l)
+
+        
+        
 
     def blink(self, channel=0, index=0, red=0, green=0, blue=0, name=None, hex=None, repeats=1, delay=500):
         """
